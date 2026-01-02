@@ -2,7 +2,49 @@
 
 A production-grade, fully interactive Calendar View component built with React, TypeScript, and Tailwind CSS 4. This component provides month and week views with comprehensive event management capabilities.
 
+## About
 
+The Calendar View Component is a modern, feature-rich calendar application designed for seamless event management and scheduling. Built with cutting-edge web technologies, it offers an intuitive user interface with powerful functionality for both developers and end-users.
+
+### What is it?
+
+This is a fully customizable calendar component library that provides a complete scheduling solution. It's designed to be integrated into web applications, offering month and week views with comprehensive event management capabilities. The component handles everything from event creation and editing to persistent storage and responsive design.
+
+### Key Capabilities
+
+- **Dual View System**: Seamlessly switch between month and week views to get the perspective you need
+- **Event Management**: Full CRUD operations (Create, Read, Update, Delete) for calendar events
+- **Interactive Creation**: Drag-to-create events directly in the week view by selecting time slots
+- **Date Range Selection**: Select multiple dates in month view for bulk operations or planning
+- **Persistent Storage**: Automatic localStorage integration to save your events across sessions
+- **Smart Event Handling**: Intelligent positioning and display of overlapping events
+- **Responsive Design**: Works flawlessly on mobile, tablet, and desktop devices
+- **Accessibility First**: Built with WCAG 2.1 AA compliance for inclusive design
+
+### Who is it for?
+
+- **Developers**: Looking for a production-ready calendar component to integrate into their React/Next.js applications
+- **Product Teams**: Needing a customizable scheduling solution for their applications
+- **End Users**: Seeking a clean, intuitive calendar interface for managing events and schedules
+
+### Use Cases
+
+- **Event Scheduling Applications**: Create, manage, and view scheduled events
+- **Task Management**: Organize tasks with due dates and time slots
+- **Booking Systems**: Handle reservations and appointments
+- **Team Calendars**: Share schedules and coordinate team activities
+- **Personal Planners**: Manage personal events and reminders
+- **Project Management**: Track project timelines and milestones
+
+### Highlights
+
+✨ **Modern Stack**: Built with React 19, TypeScript 5, and Tailwind CSS 4  
+🎨 **Beautiful UI**: Gradient designs, smooth animations, and polished interactions  
+♿ **Accessible**: Full keyboard navigation and screen reader support  
+⚡ **Performant**: Optimized for speed, handles 500+ events without lag  
+📱 **Responsive**: Works perfectly on all screen sizes  
+🔧 **Customizable**: Easy to integrate and customize to match your brand  
+📚 **Well Documented**: Comprehensive Storybook documentation with interactive examples
 
 ## Installation
 
