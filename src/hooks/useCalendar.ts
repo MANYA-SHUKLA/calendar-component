@@ -101,6 +101,42 @@ export const useCalendar = (initialDate: Date = new Date(), initialView: Calenda
     });
   }, []);
 
+  const goToNextDay = useCallback(() => {
+    setState((prev) => {
+      const nextDay = new Date(prev.currentDate);
+      nextDay.setDate(nextDay.getDate() + 1);
+      return {
+        ...prev,
+        currentDate: nextDay,
+      };
+    });
+  }, []);
+
+  const goToPreviousDay = useCallback(() => {
+    setState((prev) => {
+      const prevDay = new Date(prev.currentDate);
+      prevDay.setDate(prevDay.getDate() - 1);
+      return {
+        ...prev,
+        currentDate: prevDay,
+      };
+    });
+  }, []);
+
+  const goToNextYear = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      currentDate: new Date(prev.currentDate.getFullYear() + 1, prev.currentDate.getMonth(), 1),
+    }));
+  }, []);
+
+  const goToPreviousYear = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      currentDate: new Date(prev.currentDate.getFullYear() - 1, prev.currentDate.getMonth(), 1),
+    }));
+  }, []);
+
   return {
     ...state,
     goToNextMonth,
@@ -113,6 +149,10 @@ export const useCalendar = (initialDate: Date = new Date(), initialView: Calenda
     setFocusedDate,
     goToNextWeek,
     goToPreviousWeek,
+    goToNextDay,
+    goToPreviousDay,
+    goToNextYear,
+    goToPreviousYear,
   };
 };
 

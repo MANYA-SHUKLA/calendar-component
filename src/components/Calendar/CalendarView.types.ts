@@ -25,11 +25,11 @@ export interface CalendarViewProps {
   onEventAdd: (event: CalendarEvent) => void;
   onEventUpdate: (id: string, updates: Partial<CalendarEvent>) => void;
   onEventDelete: (id: string) => void;
-  initialView?: 'month' | 'week';
+  initialView?: 'month' | 'week' | 'day' | 'agenda' | 'year';
   initialDate?: Date;
 }
 
-export type CalendarView = 'month' | 'week';
+export type CalendarView = 'month' | 'week' | 'day' | 'agenda' | 'year';
 
 export interface CalendarState {
   currentDate: Date;

@@ -2,6 +2,10 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { CalendarViewProps, CalendarEvent } from './CalendarView.types';
 import { MonthView } from './MonthView';
 import { WeekView } from './WeekView';
+import { DayView } from './DayView';
+import { AgendaView } from './AgendaView';
+import { YearView } from './YearView';
+import { MiniCalendar } from './MiniCalendar';
 import { EventModal } from './EventModal';
 import { QuickAdd } from './QuickAdd';
 import { useCalendar } from '@/hooks/useCalendar';
@@ -166,21 +170,36 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
   // Expand recurring events for display
   const displayedEvents = useMemo(() => {
-    const viewStart = calendar.view === 'month'
-      ? new Date(calendar.currentDate.getFullYear(), calendar.currentDate.getMonth(), 1)
-      : (() => {
-          const weekStart = new Date(calendar.currentDate);
-          weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-          return weekStart;
-        })();
-    
-    const viewEnd = calendar.view === 'month'
-      ? new Date(calendar.currentDate.getFullYear(), calendar.currentDate.getMonth() + 1, 0)
-      : (() => {
-          const weekEnd = new Date(viewStart);
-          weekEnd.setDate(weekEnd.getDate() + 6);
-          return weekEnd;
-        })();
+    let viewStart: Date;
+    let viewEnd: Date;
+
+    if (calendar.view === 'month') {
+      viewStart = new Date(calendar.currentDate.getFullYear(), calendar.currentDate.getMonth(), 1);
+      viewEnd = new Date(calendar.currentDate.getFullYear(), calendar.currentDate.getMonth() + 1, 0);
+    } else if (calendar.view === 'week') {
+      const weekStart = new Date(calendar.currentDate);
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+      viewStart = weekStart;
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      viewEnd = weekEnd;
+    } else if (calendar.view === 'day') {
+      viewStart = new Date(calendar.currentDate);
+      viewStart.setHours(0, 0, 0, 0);
+      viewEnd = new Date(calendar.currentDate);
+      viewEnd.setHours(23, 59, 59, 999);
+    } else if (calendar.view === 'agenda') {
+      // Show events for next 30 days
+      viewStart = new Date();
+      viewStart.setHours(0, 0, 0, 0);
+      viewEnd = new Date();
+      viewEnd.setDate(viewEnd.getDate() + 30);
+      viewEnd.setHours(23, 59, 59, 999);
+    } else {
+      // Year view - show entire year
+      viewStart = new Date(calendar.currentDate.getFullYear(), 0, 1);
+      viewEnd = new Date(calendar.currentDate.getFullYear(), 11, 31, 23, 59, 59, 999);
+    }
     
     return expandRecurringEvents(eventManager.events, viewStart, viewEnd);
   }, [eventManager.events, calendar.currentDate, calendar.view]);
@@ -208,8 +227,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         {/* Navigation Controls */}
         <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={calendar.view === 'month' ? calendar.goToPreviousMonth : calendar.goToPreviousWeek}
-            aria-label={calendar.view === 'month' ? 'Previous month' : 'Previous week'}
+            onClick={() => {
+              if (calendar.view === 'month') calendar.goToPreviousMonth();
+              else if (calendar.view === 'week') calendar.goToPreviousWeek();
+              else if (calendar.view === 'day') calendar.goToPreviousDay();
+              else if (calendar.view === 'year') calendar.goToPreviousYear();
+            }}
+            aria-label="Previous"
             className="px-3 py-1.5 text-lg font-bold text-primary-400 hover:text-primary-300 bg-neutral-800/50 hover:bg-neutral-700/50 border border-neutral-700 hover:border-primary-500/50 rounded-lg transition-all duration-200 hover:scale-110"
           >
             ←
@@ -222,25 +246,46 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             Today
           </button>
           <button
-            onClick={calendar.view === 'month' ? calendar.goToNextMonth : calendar.goToNextWeek}
-            aria-label={calendar.view === 'month' ? 'Next month' : 'Next week'}
+            onClick={() => {
+              if (calendar.view === 'month') calendar.goToNextMonth();
+              else if (calendar.view === 'week') calendar.goToNextWeek();
+              else if (calendar.view === 'day') calendar.goToNextDay();
+              else if (calendar.view === 'year') calendar.goToNextYear();
+            }}
+            aria-label="Next"
             className="px-3 py-1.5 text-lg font-bold text-primary-400 hover:text-primary-300 bg-neutral-800/50 hover:bg-neutral-700/50 border border-neutral-700 hover:border-primary-500/50 rounded-lg transition-all duration-200 hover:scale-110"
           >
             →
           </button>
 
-          <Select
-            options={monthYearOptions}
-            value={currentMonthYear}
-            onChange={(e) => handleMonthYearChange(e.target.value)}
-            className="min-w-[180px]"
-          />
+          {(calendar.view === 'month' || calendar.view === 'week') && (
+            <Select
+              options={monthYearOptions}
+              value={currentMonthYear}
+              onChange={(e) => handleMonthYearChange(e.target.value)}
+              className="min-w-[180px]"
+            />
+          )}
+
+          {/* Mini Calendar */}
+          {(calendar.view === 'day' || calendar.view === 'agenda') && (
+            <MiniCalendar
+              selectedDate={calendar.currentDate}
+              onDateSelect={(date) => {
+                calendar.goToDate(date);
+                if (calendar.view === 'day') {
+                  calendar.setView('day');
+                }
+              }}
+              className="hidden sm:block"
+            />
+          )}
 
           <div className="flex border border-neutral-700 rounded-lg overflow-hidden bg-neutral-800/50 backdrop-blur-sm">
             <button
               onClick={() => calendar.setView('month')}
               className={clsx(
-                'px-4 py-2 text-sm font-medium transition-all duration-200',
+                'px-3 py-2 text-xs sm:text-sm font-medium transition-all duration-200',
                 calendar.view === 'month'
                   ? 'bg-gradient-to-r from-primary-500 to-accent-500 text-white shadow-lg shadow-blue-500/30'
                   : 'bg-transparent text-neutral-400 hover:text-white hover:bg-neutral-700/50'
@@ -252,7 +297,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             <button
               onClick={() => calendar.setView('week')}
               className={clsx(
-                'px-4 py-2 text-sm font-medium transition-all duration-200 border-l border-neutral-700',
+                'px-3 py-2 text-xs sm:text-sm font-medium transition-all duration-200 border-l border-neutral-700',
                 calendar.view === 'week'
                   ? 'bg-gradient-to-r from-primary-500 to-accent-500 text-white shadow-lg shadow-blue-500/30'
                   : 'bg-transparent text-neutral-400 hover:text-white hover:bg-neutral-700/50'
@@ -260,6 +305,42 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               aria-pressed={calendar.view === 'week'}
             >
               Week
+            </button>
+            <button
+              onClick={() => calendar.setView('day')}
+              className={clsx(
+                'px-3 py-2 text-xs sm:text-sm font-medium transition-all duration-200 border-l border-neutral-700',
+                calendar.view === 'day'
+                  ? 'bg-gradient-to-r from-primary-500 to-accent-500 text-white shadow-lg shadow-blue-500/30'
+                  : 'bg-transparent text-neutral-400 hover:text-white hover:bg-neutral-700/50'
+              )}
+              aria-pressed={calendar.view === 'day'}
+            >
+              Day
+            </button>
+            <button
+              onClick={() => calendar.setView('agenda')}
+              className={clsx(
+                'px-3 py-2 text-xs sm:text-sm font-medium transition-all duration-200 border-l border-neutral-700',
+                calendar.view === 'agenda'
+                  ? 'bg-gradient-to-r from-primary-500 to-accent-500 text-white shadow-lg shadow-blue-500/30'
+                  : 'bg-transparent text-neutral-400 hover:text-white hover:bg-neutral-700/50'
+              )}
+              aria-pressed={calendar.view === 'agenda'}
+            >
+              Agenda
+            </button>
+            <button
+              onClick={() => calendar.setView('year')}
+              className={clsx(
+                'px-3 py-2 text-xs sm:text-sm font-medium transition-all duration-200 border-l border-neutral-700',
+                calendar.view === 'year'
+                  ? 'bg-gradient-to-r from-primary-500 to-accent-500 text-white shadow-lg shadow-blue-500/30'
+                  : 'bg-transparent text-neutral-400 hover:text-white hover:bg-neutral-700/50'
+              )}
+              aria-pressed={calendar.view === 'year'}
+            >
+              Year
             </button>
           </div>
         </div>
@@ -281,7 +362,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
               eventManager.updateEvent(eventId, updates);
             }}
           />
-        ) : (
+        ) : calendar.view === 'week' ? (
           <WeekView
             currentDate={calendar.currentDate}
             events={displayedEvents}
@@ -292,6 +373,35 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             onDragCreate={handleDragCreate}
             onEventMove={handleEventMove}
             onEventResize={handleEventResize}
+          />
+        ) : calendar.view === 'day' ? (
+          <DayView
+            currentDate={calendar.currentDate}
+            events={displayedEvents}
+            selectedDate={calendar.selectedDate}
+            onDateClick={handleDateClick}
+            onEventClick={handleEventClick}
+            onTimeSlotClick={handleTimeSlotClick}
+            onDragCreate={handleDragCreate}
+            onEventMove={handleEventMove}
+            onEventResize={handleEventResize}
+          />
+        ) : calendar.view === 'agenda' ? (
+          <AgendaView
+            currentDate={calendar.currentDate}
+            events={displayedEvents}
+            onEventClick={handleEventClick}
+            onDateClick={handleDateClick}
+          />
+        ) : (
+          <YearView
+            currentDate={calendar.currentDate}
+            events={displayedEvents}
+            onDateClick={(date) => {
+              calendar.goToDate(date);
+              calendar.setView('month');
+            }}
+            onEventClick={handleEventClick}
           />
         )}
       </div>
