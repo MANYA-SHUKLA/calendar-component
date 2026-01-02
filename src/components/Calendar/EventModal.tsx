@@ -132,13 +132,20 @@ export const EventModal: React.FC<EventModalProps> = ({
         setDescription('');
         setColor('#3b82f6');
         setCategory('');
-        setRecurrenceEnabled(false);
-        setRecurrence({ frequency: 'weekly', interval: 1 });
-        setSelectedTemplate('');
+      setRecurrenceEnabled(false);
+      setRecurrence({ frequency: 'weekly', interval: 1 });
+      setSelectedTemplate('');
       }
       setErrors([]);
     }
   }, [isOpen, event, initialDate, initialEndDate]);
+
+  // Sync validation errors from props
+  useEffect(() => {
+    if (validationErrors.length > 0) {
+      setErrors(validationErrors);
+    }
+  }, [validationErrors]);
 
   // Apply template when selected
   useEffect(() => {
@@ -211,16 +218,31 @@ export const EventModal: React.FC<EventModalProps> = ({
       recurrence: recurrenceEnabled ? recurrence : undefined,
     };
 
+    // Validate title before saving
+    if (!title || title.trim().length === 0) {
+      setErrors(['Title is required']);
+      return;
+    }
+
+    // Validate end date is after start date
+    if (end <= start) {
+      setErrors(['End date must be after start date']);
+      return;
+    }
+
     const success = onSave(eventData);
     if (success) {
       setErrors([]);
       onClose();
     } else {
-      // Use validation errors from eventManager if available, otherwise show generic message
-      const displayErrors = validationErrors.length > 0 
-        ? validationErrors 
-        : ['Failed to save event. Please check all fields.'];
-      setErrors(displayErrors);
+      // If save failed, check validation errors after a brief delay to allow state update
+      setTimeout(() => {
+        if (validationErrors.length > 0) {
+          setErrors(validationErrors);
+        } else {
+          setErrors(['Failed to save event. Please check all fields.']);
+        }
+      }, 50);
     }
   }, [title, description, startDate, startTime, endDate, endTime, color, category, recurrenceEnabled, recurrence, onSave, onClose, validationErrors]);
 

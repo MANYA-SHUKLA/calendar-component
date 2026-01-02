@@ -75,6 +75,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   }, [eventManager.events]);
 
   const handleSaveEvent = useCallback((eventData: Partial<CalendarEvent>): boolean => {
+    // Clear errors before attempting save
+    eventManager.clearErrors();
+    
     if (editingEvent) {
       const success = eventManager.updateEvent(editingEvent.id, eventData);
       return success;
