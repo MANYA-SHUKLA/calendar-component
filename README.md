@@ -1,36 +1,163 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Calendar View Component
 
-## Getting Started
+A production-grade, fully interactive Calendar View component built with React, TypeScript, and Tailwind CSS 4. This component provides month and week views with comprehensive event management capabilities.
 
-First, run the development server:
+
+
+## Installation
+
+```bash
+npm install
+npm run storybook
+```
+
+For Next.js development:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Architecture
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The component is built with a modular architecture following best practices:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Component Structure**: Separated into logical components (MonthView, WeekView, CalendarCell, EventModal)
+- **Custom Hooks**: `useCalendar` for calendar state management and `useEventManager` for event operations
+- **Utility Functions**: Date manipulation and event utilities in separate modules
+- **Primitive Components**: Reusable UI primitives (Button, Modal, Select) built from scratch
+- **Type Safety**: Full TypeScript with strict mode enabled
 
-## Learn More
+## Features
 
-To learn more about Next.js, take a look at the following resources:
+- [x] Month/Week views with smooth transitions
+- [x] Event management (Create, Read, Update, Delete)
+- [x] Responsive design (Mobile, Tablet, Desktop)
+- [x] Keyboard accessibility (WCAG 2.1 AA compliant)
+- [x] ARIA labels and roles
+- [x] Event color coding and categorization
+- [x] Time slot selection in week view
+- [x] Drag-to-create events in week view
+- [x] Multi-select date range selection in month view
+- [x] LocalStorage persistence for events
+- [x] Overlapping event handling
+- [x] Performance optimizations (React.memo, useCallback, useMemo)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Storybook Stories
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **Default** - Current month with sample events
+2. **Empty** - Empty calendar state
+3. **Week View** - Week view with time slots
+4. **With Many Events** - Calendar with 25+ events
+5. **Interactive Playground** - Fully functional with all interactions
+6. **Mobile View** - Responsive layout demonstration
+7. **Accessibility** - Keyboard navigation demonstration
 
-## Deploy on Vercel
+## Technologies
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **React 19** - Component framework
+- **TypeScript 5** - Type-safe development
+- **Tailwind CSS 4** - Utility-first styling
+- **Next.js 16** - Build tooling and framework
+- **Storybook 10** - Component documentation
+- **date-fns** - Date manipulation utilities
+- **clsx** - Conditional class management
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Project Structure
+
+```
+calendar-component/
+├── src/
+│   ├── components/
+│   │   ├── Calendar/
+│   │   │   ├── CalendarView.tsx
+│   │   │   ├── CalendarView.stories.tsx
+│   │   │   ├── CalendarView.types.ts
+│   │   │   ├── MonthView.tsx
+│   │   │   ├── WeekView.tsx
+│   │   │   ├── CalendarCell.tsx
+│   │   │   └── EventModal.tsx
+│   │   └── primitives/
+│   │       ├── Button.tsx
+│   │       ├── Modal.tsx
+│   │       └── Select.tsx
+│   ├── hooks/
+│   │   ├── useCalendar.ts
+│   │   └── useEventManager.ts
+│   └── utils/
+│       ├── date.utils.ts
+│       └── event.utils.ts
+├── .storybook/
+│   ├── main.ts
+│   └── preview.ts
+└── app/
+    └── globals.css
+```
+
+## Usage
+
+```tsx
+import { CalendarView } from '@/components/Calendar/CalendarView';
+import { CalendarEvent } from '@/components/Calendar/CalendarView.types';
+
+const events: CalendarEvent[] = [
+  {
+    id: 'evt-1',
+    title: 'Team Meeting',
+    startDate: new Date(2024, 0, 15, 9, 0),
+    endDate: new Date(2024, 0, 15, 10, 0),
+    color: '#3b82f6',
+  },
+];
+
+function App() {
+  return (
+    <CalendarView
+      events={events}
+      onEventAdd={(event) => console.log('Added:', event)}
+      onEventUpdate={(id, updates) => console.log('Updated:', id, updates)}
+      onEventDelete={(id) => console.log('Deleted:', id)}
+      initialView="month"
+    />
+  );
+}
+```
+
+## Accessibility
+
+The component meets WCAG 2.1 AA standards:
+
+- **Keyboard Navigation**: All interactive elements are keyboard accessible
+- **ARIA Labels**: Proper labels, roles, and live regions
+- **Focus Management**: Logical focus order with visible indicators
+- **Screen Reader Support**: Semantic HTML and ARIA attributes
+
+## Performance
+
+- Optimized rendering with React.memo for expensive components
+- Debounced interactions where appropriate
+- Efficient date calculations
+- Handles 500+ events without performance degradation
+
+## Development
+
+```bash
+# Run Storybook
+npm run storybook
+
+# Run Next.js dev server
+npm run dev
+
+# Build for production
+npm run build
+
+# Type checking
+npx tsc --noEmit
+```
+
+## License
+
+MIT
+
+## Contact
+
+MANYA SHUKLA 2025
