@@ -83,6 +83,8 @@ export const useEventManager = (
         endDate: event.endDate!,
         color: event.color || '#3b82f6',
         category: event.category,
+        recurrence: event.recurrence,
+        templateId: event.templateId,
       };
 
       setEvents((prev) => [...prev, newEvent]);

@@ -16,6 +16,7 @@ export interface EventModalProps {
   existingEvents?: CalendarEvent[];
   onSave: (event: Partial<CalendarEvent>) => boolean;
   onDelete?: (id: string) => void;
+  validationErrors?: string[];
 }
 
 const colorOptions = [
@@ -47,6 +48,7 @@ export const EventModal: React.FC<EventModalProps> = ({
   existingEvents = [],
   onSave,
   onDelete,
+  validationErrors = [],
 }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -180,8 +182,24 @@ export const EventModal: React.FC<EventModalProps> = ({
   }, [startDate, startTime, endDate, endTime, existingEvents, event?.id]);
 
   const handleSave = useCallback(() => {
+    // Validate date strings before creating Date objects
+    if (!startDate || !startTime || !endDate || !endTime) {
+      setErrors(['Please fill in all date and time fields.']);
+      return;
+    }
+
     const start = new Date(`${startDate}T${startTime}`);
     const end = new Date(`${endDate}T${endTime}`);
+
+    // Check if dates are valid
+    if (isNaN(start.getTime())) {
+      setErrors(['Invalid start date or time.']);
+      return;
+    }
+    if (isNaN(end.getTime())) {
+      setErrors(['Invalid end date or time.']);
+      return;
+    }
 
     const eventData: Partial<CalendarEvent> = {
       title: title.trim(),
@@ -195,11 +213,16 @@ export const EventModal: React.FC<EventModalProps> = ({
 
     const success = onSave(eventData);
     if (success) {
+      setErrors([]);
       onClose();
     } else {
-      setErrors(['Failed to save event. Please check all fields.']);
+      // Use validation errors from eventManager if available, otherwise show generic message
+      const displayErrors = validationErrors.length > 0 
+        ? validationErrors 
+        : ['Failed to save event. Please check all fields.'];
+      setErrors(displayErrors);
     }
-  }, [title, description, startDate, startTime, endDate, endTime, color, category, recurrenceEnabled, recurrence, onSave, onClose]);
+  }, [title, description, startDate, startTime, endDate, endTime, color, category, recurrenceEnabled, recurrence, onSave, onClose, validationErrors]);
 
   const handleDelete = useCallback(() => {
     if (event && onDelete) {

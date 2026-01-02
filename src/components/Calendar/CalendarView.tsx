@@ -76,9 +76,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
   const handleSaveEvent = useCallback((eventData: Partial<CalendarEvent>): boolean => {
     if (editingEvent) {
-      return eventManager.updateEvent(editingEvent.id, eventData);
+      const success = eventManager.updateEvent(editingEvent.id, eventData);
+      return success;
     } else {
-      return eventManager.addEvent(eventData);
+      const success = eventManager.addEvent(eventData);
+      return success;
     }
   }, [editingEvent, eventManager]);
 
@@ -301,6 +303,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         existingEvents={eventManager.events}
         onSave={handleSaveEvent}
         onDelete={editingEvent ? handleDeleteEvent : undefined}
+        validationErrors={eventManager.errors}
       />
     </div>
   );
