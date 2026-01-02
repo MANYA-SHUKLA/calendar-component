@@ -9,6 +9,9 @@ import { MiniCalendar } from './MiniCalendar';
 import { EventModal } from './EventModal';
 import { QuickAdd } from './QuickAdd';
 import { AnalyticsPanel } from '../Analytics/AnalyticsPanel';
+import { AccessibilitySettings } from '../Accessibility/AccessibilitySettings';
+import { ARIALiveRegion, formatEventAnnouncement } from '../Accessibility/ARIALiveRegion';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useCalendar } from '@/hooks/useCalendar';
 import { useEventManager } from '@/hooks/useEventManager';
 import { formatDate } from '@/utils/date.utils';
@@ -35,9 +38,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
+  const [isAccessibilityOpen, setIsAccessibilityOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [modalInitialDate, setModalInitialDate] = useState<Date | undefined>();
   const [modalInitialEndDate, setModalInitialEndDate] = useState<Date | undefined>();
+  const [ariaAnnouncement, setAriaAnnouncement] = useState<string | null>(null);
 
   const handleDateClick = useCallback((date: Date) => {
     setEditingEvent(null);
@@ -86,9 +91,19 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     
     if (editingEvent) {
       const success = eventManager.updateEvent(editingEvent.id, eventData);
+      if (success && eventData.startDate) {
+        setAriaAnnouncement(
+          formatEventAnnouncement('updated', eventData.title || editingEvent.title, eventData.startDate)
+        );
+      }
       return success;
     } else {
       const success = eventManager.addEvent(eventData);
+      if (success && eventData.startDate) {
+        setAriaAnnouncement(
+          formatEventAnnouncement('added', eventData.title || 'Event', eventData.startDate)
+        );
+      }
       return success;
     }
   }, [editingEvent, eventManager]);
@@ -120,6 +135,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   }, [eventManager]);
 
   const handleDeleteEvent = useCallback((id: string) => {
+    const event = eventManager.events.find((e) => e.id === id);
+    if (event) {
+      setAriaAnnouncement(formatEventAnnouncement('deleted', event.title, event.startDate));
+    }
     eventManager.deleteEvent(id);
   }, [eventManager]);
 
@@ -207,8 +226,49 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   }, [eventManager.events, calendar.currentDate, calendar.view]);
 
   const handleQuickAdd = useCallback((eventData: Partial<CalendarEvent>) => {
-    eventManager.addEvent(eventData);
+    const success = eventManager.addEvent(eventData);
+    if (success && eventData.startDate) {
+      setAriaAnnouncement(
+        formatEventAnnouncement('added', eventData.title || 'Event', eventData.startDate)
+      );
+    }
   }, [eventManager]);
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    onNewEvent: () => {
+      setEditingEvent(null);
+      setModalInitialDate(new Date());
+      setModalInitialEndDate(undefined);
+      setIsModalOpen(true);
+    },
+    onNavigatePrevious: () => {
+      if (calendar.view === 'month') calendar.goToPreviousMonth();
+      else if (calendar.view === 'week') calendar.goToPreviousWeek();
+      else if (calendar.view === 'day') calendar.goToPreviousDay();
+      else if (calendar.view === 'year') calendar.goToPreviousYear();
+    },
+    onNavigateNext: () => {
+      if (calendar.view === 'month') calendar.goToNextMonth();
+      else if (calendar.view === 'week') calendar.goToNextWeek();
+      else if (calendar.view === 'day') calendar.goToNextDay();
+      else if (calendar.view === 'year') calendar.goToNextYear();
+    },
+    onSwitchView: (view) => {
+      calendar.setView(view);
+      setAriaAnnouncement(`Switched to ${view} view`);
+    },
+    onGoToToday: () => {
+      calendar.goToToday();
+      setAriaAnnouncement('Navigated to today');
+    },
+    onCloseModal: () => {
+      if (isModalOpen) handleCloseModal();
+      if (isAnalyticsOpen) setIsAnalyticsOpen(false);
+      if (isAccessibilityOpen) setIsAccessibilityOpen(false);
+    },
+    enabled: !isModalOpen && !isAnalyticsOpen && !isAccessibilityOpen,
+  });
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -226,15 +286,26 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             </h1>
           </div>
 
-          {/* Analytics Button */}
-          <button
-            onClick={() => setIsAnalyticsOpen(true)}
-            className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-primary-500 to-accent-500 hover:from-primary-600 hover:to-accent-600 rounded-lg transition-all duration-200 hover:scale-105 shadow-lg shadow-blue-500/30 flex items-center gap-2"
-            aria-label="Open Analytics"
-          >
-            <span>📊</span>
-            <span>Analytics</span>
-          </button>
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsAccessibilityOpen(true)}
+              className="px-3 py-2 text-sm font-medium text-neutral-300 hover:text-white bg-neutral-800/50 hover:bg-neutral-700/50 border border-neutral-700 hover:border-primary-500/50 rounded-lg transition-all duration-200 flex items-center gap-2"
+              aria-label="Open Accessibility Settings"
+              title="Accessibility Settings (Keyboard shortcuts available)"
+            >
+              <span>♿</span>
+              <span className="hidden sm:inline">Accessibility</span>
+            </button>
+            <button
+              onClick={() => setIsAnalyticsOpen(true)}
+              className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-primary-500 to-accent-500 hover:from-primary-600 hover:to-accent-600 rounded-lg transition-all duration-200 hover:scale-105 shadow-lg shadow-blue-500/30 flex items-center gap-2"
+              aria-label="Open Analytics"
+            >
+              <span>📊</span>
+              <span>Analytics</span>
+            </button>
+          </div>
 
         {/* Navigation Controls */}
         <div className="flex flex-wrap items-center gap-2">
@@ -448,6 +519,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           setIsModalOpen(true);
         }}
       />
+
+      {/* Accessibility Settings */}
+      <AccessibilitySettings
+        isOpen={isAccessibilityOpen}
+        onClose={() => setIsAccessibilityOpen(false)}
+      />
+
+      {/* ARIA Live Region */}
+      <ARIALiveRegion announcement={ariaAnnouncement} />
     </div>
   );
 };

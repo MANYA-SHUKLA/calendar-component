@@ -229,3 +229,76 @@ body::before {
 ::-webkit-scrollbar-thumb:hover {
   background: #00b8e6;
 }
+
+/* Screen reader only class */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* High Contrast Mode */
+.high-contrast {
+  --color-primary-500: #00d4ff;
+  --color-primary-600: #00b8e6;
+  --color-accent-500: #00d4ff;
+  --color-neutral-900: #ffffff;
+  --color-neutral-800: #ffffff;
+  --color-neutral-700: #ffffff;
+  --color-neutral-600: #e0e0e0;
+  --color-neutral-500: #c0c0c0;
+  --color-neutral-400: #a0a0a0;
+  --color-neutral-300: #808080;
+  --color-neutral-200: #606060;
+  --color-neutral-100: #404040;
+  --color-neutral-50: #000000;
+}
+
+.high-contrast body {
+  background: #000000;
+  color: #ffffff;
+}
+
+.high-contrast .bg-neutral-800,
+.high-contrast .bg-neutral-900 {
+  background-color: #000000 !important;
+  border-color: #ffffff !important;
+}
+
+.high-contrast .text-neutral-400,
+.high-contrast .text-neutral-500 {
+  color: #ffffff !important;
+}
+
+/* Reduced Motion Mode */
+.reduced-motion *,
+.reduced-motion *::before,
+.reduced-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+.reduced-motion .animate-float,
+.reduced-motion .animate-float-slow,
+.reduced-motion .animate-float-reverse {
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
