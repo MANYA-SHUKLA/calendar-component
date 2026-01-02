@@ -6,6 +6,7 @@ import { EventModal } from './EventModal';
 import { useCalendar } from '@/hooks/useCalendar';
 import { useEventManager } from '@/hooks/useEventManager';
 import { formatDate } from '@/utils/date.utils';
+import { expandRecurringEvents } from '@/utils/smart-calendar.utils';
 import { Button } from '../primitives/Button';
 import { Select } from '../primitives/Select';
 import clsx from 'clsx';
@@ -39,11 +40,38 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   }, []);
 
   const handleEventClick = useCallback((event: CalendarEvent) => {
-    setEditingEvent(event);
+    // Find the original event from the manager
+    // If this is a recurring event instance (ID like "baseId-0"), find the original
+    let eventToEdit = eventManager.events.find((e) => e.id === event.id);
+    
+    // If not found, it might be a recurring instance - try to find by base ID
+    if (!eventToEdit && event.id.includes('-')) {
+      // Try to find the base event by matching the ID pattern
+      // Recurring instances have IDs like "baseId-0", "baseId-1", etc.
+      const parts = event.id.split('-');
+      if (parts.length > 1) {
+        // Try progressively longer base IDs
+        for (let i = parts.length - 1; i > 0; i--) {
+          const baseId = parts.slice(0, i).join('-');
+          const found = eventManager.events.find((e) => e.id === baseId);
+          if (found) {
+            eventToEdit = found;
+            break;
+          }
+        }
+      }
+    }
+    
+    // Fallback to the clicked event if we can't find the original
+    if (!eventToEdit) {
+      eventToEdit = event;
+    }
+    
+    setEditingEvent(eventToEdit);
     setModalInitialDate(undefined);
     setModalInitialEndDate(undefined);
     setIsModalOpen(true);
-  }, []);
+  }, [eventManager.events]);
 
   const handleSaveEvent = useCallback((eventData: Partial<CalendarEvent>): boolean => {
     if (editingEvent) {
@@ -103,6 +131,27 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     const [year, month] = value.split('-').map(Number);
     calendar.goToDate(new Date(year, month, 1));
   }, [calendar]);
+
+  // Expand recurring events for display
+  const displayedEvents = useMemo(() => {
+    const viewStart = calendar.view === 'month'
+      ? new Date(calendar.currentDate.getFullYear(), calendar.currentDate.getMonth(), 1)
+      : (() => {
+          const weekStart = new Date(calendar.currentDate);
+          weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+          return weekStart;
+        })();
+    
+    const viewEnd = calendar.view === 'month'
+      ? new Date(calendar.currentDate.getFullYear(), calendar.currentDate.getMonth() + 1, 0)
+      : (() => {
+          const weekEnd = new Date(viewStart);
+          weekEnd.setDate(weekEnd.getDate() + 6);
+          return weekEnd;
+        })();
+    
+    return expandRecurringEvents(eventManager.events, viewStart, viewEnd);
+  }, [eventManager.events, calendar.currentDate, calendar.view]);
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -180,7 +229,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         {calendar.view === 'month' ? (
           <MonthView
             currentDate={calendar.currentDate}
-            events={eventManager.events}
+            events={displayedEvents}
             selectedDate={calendar.selectedDate}
             selectedDateRange={calendar.selectedDateRange}
             onDateClick={handleDateClick}
@@ -190,7 +239,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         ) : (
           <WeekView
             currentDate={calendar.currentDate}
-            events={eventManager.events}
+            events={displayedEvents}
             selectedDate={calendar.selectedDate}
             onDateClick={handleDateClick}
             onEventClick={handleEventClick}
@@ -207,6 +256,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         event={editingEvent}
         initialDate={modalInitialDate}
         initialEndDate={modalInitialEndDate}
+        existingEvents={eventManager.events}
         onSave={handleSaveEvent}
         onDelete={editingEvent ? handleDeleteEvent : undefined}
       />
