@@ -8,6 +8,7 @@ import { YearView } from './YearView';
 import { MiniCalendar } from './MiniCalendar';
 import { EventModal } from './EventModal';
 import { QuickAdd } from './QuickAdd';
+import { AnalyticsPanel } from '../Analytics/AnalyticsPanel';
 import { useCalendar } from '@/hooks/useCalendar';
 import { useEventManager } from '@/hooks/useEventManager';
 import { formatDate } from '@/utils/date.utils';
@@ -33,6 +34,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   );
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [modalInitialDate, setModalInitialDate] = useState<Date | undefined>();
   const [modalInitialEndDate, setModalInitialEndDate] = useState<Date | undefined>();
@@ -215,14 +217,24 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         <QuickAdd onAdd={handleQuickAdd} />
       </div>
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-1 h-8 bg-gradient-to-b from-primary-500 to-accent-500 rounded-full"></div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 via-primary-500 to-accent-500 bg-clip-text text-transparent">
-            Calendar
-          </h1>
-        </div>
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-8 bg-gradient-to-b from-primary-500 to-accent-500 rounded-full"></div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 via-primary-500 to-accent-500 bg-clip-text text-transparent">
+              Calendar
+            </h1>
+          </div>
+
+          {/* Analytics Button */}
+          <button
+            onClick={() => setIsAnalyticsOpen(true)}
+            className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-primary-500 to-accent-500 hover:from-primary-600 hover:to-accent-600 rounded-lg transition-all duration-200 hover:scale-105 shadow-lg shadow-blue-500/30 flex items-center gap-2"
+            aria-label="Open Analytics"
+          >
+            <span>📊</span>
+            <span>Analytics</span>
+          </button>
 
         {/* Navigation Controls */}
         <div className="flex flex-wrap items-center gap-2">
@@ -417,6 +429,24 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         onSave={handleSaveEvent}
         onDelete={editingEvent ? handleDeleteEvent : undefined}
         validationErrors={eventManager.errors}
+      />
+
+      {/* Analytics Panel */}
+      <AnalyticsPanel
+        events={eventManager.events}
+        currentDate={calendar.currentDate}
+        isOpen={isAnalyticsOpen}
+        onClose={() => setIsAnalyticsOpen(false)}
+        onDateClick={(date) => {
+          calendar.goToDate(date);
+          setIsAnalyticsOpen(false);
+        }}
+        onTimeSlotClick={(start, end) => {
+          setModalInitialDate(start);
+          setModalInitialEndDate(end);
+          setIsAnalyticsOpen(false);
+          setIsModalOpen(true);
+        }}
       />
     </div>
   );
