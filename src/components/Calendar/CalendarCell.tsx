@@ -128,7 +128,7 @@ export const CalendarCell: React.FC<CalendarCellProps> = React.memo(({
           {dayNumber}
         </span>
         {isTodayCell && (
-          <span className="w-7 h-7 bg-gradient-to-br from-primary-500 to-accent-500 rounded-full text-white text-xs flex items-center justify-center font-bold shadow-lg shadow-primary-500/50 animate-pulse-glow">
+          <span className="w-7 h-7 bg-gradient-to-br from-primary-500 to-accent-500 rounded-full text-white text-xs flex items-center justify-center font-bold shadow-lg shadow-blue-500/50 animate-pulse-glow">
             {dayNumber}
           </span>
         )}

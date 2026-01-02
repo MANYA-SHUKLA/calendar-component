@@ -3,6 +3,7 @@
 import { CalendarView } from '@/components/Calendar/CalendarView';
 import { CalendarEvent } from '@/components/Calendar/CalendarView.types';
 import Footer from '@/components/Footer';
+import { FloatingShapes } from '@/components/FloatingShapes';
 
 const sampleEvents: CalendarEvent[] = [
   {
@@ -48,10 +49,11 @@ export default function Home() {
 
   return (
     <main className="min-h-screen p-4 md:p-8 pb-20 sm:pb-24 relative">
-      <div className="max-w-7xl mx-auto">
+      <FloatingShapes />
+      <div className="max-w-7xl mx-auto relative z-10">
         <div className="relative">
-          {/* Background gradient effect */}
-          <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 via-transparent to-accent-500/10 rounded-3xl blur-3xl -z-10"></div>
+          {/* Background gradient effect with blue theme */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary-500/15 via-transparent to-accent-500/15 rounded-3xl blur-3xl -z-10"></div>
           <CalendarView
             events={sampleEvents}
             onEventAdd={handleEventAdd}
