@@ -12,6 +12,8 @@ export interface WeekViewProps {
   onEventClick: (event: CalendarEvent) => void;
   onTimeSlotClick?: (date: Date, hour: number, minute: number) => void;
   onDragCreate?: (startDate: Date, endDate: Date) => void;
+  onEventMove?: (eventId: string, newStartDate: Date, newEndDate: Date) => void;
+  onEventResize?: (eventId: string, newEndDate: Date) => void;
 }
 
 const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -25,11 +27,17 @@ export const WeekView: React.FC<WeekViewProps> = ({
   onEventClick,
   onTimeSlotClick,
   onDragCreate,
+  onEventMove,
+  onEventResize,
 }) => {
   const weekDaysList = useMemo(() => getWeekDays(currentDate), [currentDate]);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<{ date: Date; hour: number; minute: number } | null>(null);
   const [dragEnd, setDragEnd] = useState<{ date: Date; hour: number; minute: number } | null>(null);
+  const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null);
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizedEvent, setResizedEvent] = useState<CalendarEvent | null>(null);
+  const [resizeStartY, setResizeStartY] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleTimeSlotClick = (date: Date, hour: number) => {
@@ -69,9 +77,31 @@ export const WeekView: React.FC<WeekViewProps> = ({
     return { date, hour, minute };
   }, [weekDaysList]);
 
+  const handleEventDragStart = useCallback((e: React.MouseEvent, event: CalendarEvent) => {
+    e.stopPropagation();
+    if (e.button !== 0) return;
+    
+    const timeSlot = getTimeSlotFromPoint(e.clientX, e.clientY);
+    if (!timeSlot) return;
+    
+    setDraggedEvent(event);
+    setDragStart(timeSlot);
+    setDragEnd(timeSlot);
+    setIsDragging(true);
+  }, [getTimeSlotFromPoint]);
+
+  const handleEventResizeStart = useCallback((e: React.MouseEvent, event: CalendarEvent) => {
+    e.stopPropagation();
+    if (e.button !== 0) return;
+    
+    setResizedEvent(event);
+    setResizeStartY(e.clientY);
+    setIsResizing(true);
+  }, []);
+
   const handleMouseDown = useCallback((e: React.MouseEvent, date: Date, hour: number) => {
-    // Only start drag if left mouse button and not clicking on an event
-    if (e.button !== 0 || (e.target as HTMLElement).closest('[data-event]')) {
+    // Only start drag if left mouse button and not clicking on an event or resize handle
+    if (e.button !== 0 || (e.target as HTMLElement).closest('[data-event]') || (e.target as HTMLElement).closest('[data-resize-handle]')) {
       return;
     }
     
@@ -84,19 +114,67 @@ export const WeekView: React.FC<WeekViewProps> = ({
   }, []);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging || !dragStart) return;
-    
-    const timeSlot = getTimeSlotFromPoint(e.clientX, e.clientY);
-    if (timeSlot) {
-      setDragEnd(timeSlot);
+    if (isResizing && resizedEvent && resizeStartY !== 0) {
+      const deltaY = e.clientY - resizeStartY;
+      const hourHeight = 60; // 60px per hour
+      const minutesDelta = Math.round((deltaY / hourHeight) * 60);
+      
+      const newEndDate = new Date(resizedEvent.endDate);
+      newEndDate.setMinutes(newEndDate.getMinutes() + minutesDelta);
+      
+      // Minimum 15 minutes duration
+      if (newEndDate > resizedEvent.startDate) {
+        setResizedEvent({ ...resizedEvent, endDate: newEndDate });
+      }
+      return;
     }
-  }, [isDragging, dragStart, getTimeSlotFromPoint]);
+    
+    if (isDragging && draggedEvent && dragStart) {
+      const timeSlot = getTimeSlotFromPoint(e.clientX, e.clientY);
+      if (timeSlot) {
+        setDragEnd(timeSlot);
+      }
+      return;
+    }
+    
+    if (isDragging && !draggedEvent && dragStart) {
+      const timeSlot = getTimeSlotFromPoint(e.clientX, e.clientY);
+      if (timeSlot) {
+        setDragEnd(timeSlot);
+      }
+    }
+  }, [isDragging, isResizing, dragStart, draggedEvent, resizedEvent, resizeStartY, getTimeSlotFromPoint]);
 
   const handleMouseUp = useCallback((e: MouseEvent) => {
+    if (isResizing && resizedEvent && onEventResize) {
+      onEventResize(resizedEvent.id, resizedEvent.endDate);
+      setIsResizing(false);
+      setResizedEvent(null);
+      setResizeStartY(0);
+      return;
+    }
+    
+    if (isDragging && draggedEvent && dragStart && dragEnd && onEventMove) {
+      // Event was being dragged
+      const newStartDate = new Date(dragEnd.date);
+      newStartDate.setHours(dragEnd.hour, dragEnd.minute, 0, 0);
+      
+      const duration = draggedEvent.endDate.getTime() - draggedEvent.startDate.getTime();
+      const newEndDate = new Date(newStartDate.getTime() + duration);
+      
+      onEventMove(draggedEvent.id, newStartDate, newEndDate);
+      setIsDragging(false);
+      setDraggedEvent(null);
+      setDragStart(null);
+      setDragEnd(null);
+      return;
+    }
+    
     if (!isDragging || !dragStart || !dragEnd) {
       setIsDragging(false);
       setDragStart(null);
       setDragEnd(null);
+      setDraggedEvent(null);
       return;
     }
     
@@ -141,10 +219,11 @@ export const WeekView: React.FC<WeekViewProps> = ({
     setIsDragging(false);
     setDragStart(null);
     setDragEnd(null);
-  }, [isDragging, dragStart, dragEnd, onDragCreate]);
+    setDraggedEvent(null);
+  }, [isDragging, isResizing, dragStart, dragEnd, draggedEvent, resizedEvent, onDragCreate, onEventMove, onEventResize, handleTimeSlotClick]);
 
   useEffect(() => {
-    if (isDragging) {
+    if (isDragging || isResizing) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       return () => {
@@ -152,7 +231,7 @@ export const WeekView: React.FC<WeekViewProps> = ({
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+  }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
 
   // Calculate drag preview
   const dragPreview = useMemo(() => {
@@ -331,16 +410,33 @@ export const WeekView: React.FC<WeekViewProps> = ({
                   
                   {/* Events */}
                   {dayEvents.map((event) => {
-                    const style = getEventStyle(event, dayDate);
+                    const isDragged = draggedEvent?.id === event.id;
+                    const isResized = resizedEvent?.id === event.id;
+                    const displayEvent = isResized ? resizedEvent : (isDragged && dragEnd ? (() => {
+                      const newStart = new Date(dragEnd.date);
+                      newStart.setHours(dragEnd.hour, dragEnd.minute, 0, 0);
+                      const duration = event.endDate.getTime() - event.startDate.getTime();
+                      const newEnd = new Date(newStart.getTime() + duration);
+                      return { ...event, startDate: newStart, endDate: newEnd };
+                    })() : event);
+                    
+                    const style = getEventStyle(displayEvent, dayDate);
                     return (
                       <div
                         key={event.id}
                         data-event
+                        onMouseDown={(e) => handleEventDragStart(e, event)}
                         onClick={(e) => {
-                          e.stopPropagation();
-                          onEventClick(event);
+                          if (!isDragging && !isResizing) {
+                            e.stopPropagation();
+                            onEventClick(event);
+                          }
                         }}
-                        className="absolute left-0 right-0 px-2 py-1 rounded-md text-xs text-white cursor-pointer hover:opacity-95 hover:scale-[1.02] transition-all duration-200 overflow-hidden shadow-lg border border-white/10"
+                        className={clsx(
+                          "absolute left-0 right-0 px-2 py-1 rounded-md text-xs text-white cursor-move hover:opacity-95 hover:scale-[1.02] transition-all duration-200 overflow-hidden shadow-lg border border-white/10",
+                          isDragged && "opacity-80 z-50",
+                          isResized && "opacity-80 z-50"
+                        )}
                         style={{
                           ...style,
                           backgroundColor: event.color || '#3b82f6',
@@ -349,8 +445,18 @@ export const WeekView: React.FC<WeekViewProps> = ({
                       >
                         <div className="font-semibold truncate">{event.title}</div>
                         <div className="text-[10px] opacity-90 truncate">
-                          {formatTime(event.startDate)} - {formatTime(event.endDate)}
+                          {formatTime(displayEvent.startDate)} - {formatTime(displayEvent.endDate)}
                         </div>
+                        {/* Resize handle */}
+                        <div
+                          data-resize-handle
+                          onMouseDown={(e) => {
+                            e.stopPropagation();
+                            handleEventResizeStart(e, event);
+                          }}
+                          className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-white/20 transition-colors"
+                          style={{ borderBottomLeftRadius: '0.375rem', borderBottomRightRadius: '0.375rem' }}
+                        />
                       </div>
                     );
                   })}

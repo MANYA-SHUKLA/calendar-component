@@ -11,6 +11,8 @@ export interface MonthViewProps {
   onDateClick: (date: Date) => void;
   onDateRangeSelect?: (range: { start: Date; end: Date } | null) => void;
   onEventClick: (event: CalendarEvent) => void;
+  onEventMove?: (eventId: string, newStartDate: Date, newEndDate: Date) => void;
+  onEventUpdate?: (eventId: string, updates: Partial<CalendarEvent>) => void;
 }
 
 const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -23,12 +25,25 @@ export const MonthView: React.FC<MonthViewProps> = ({
   onDateClick,
   onDateRangeSelect,
   onEventClick,
+  onEventMove,
+  onEventUpdate,
 }) => {
   const grid = getCalendarGrid(currentDate);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<Date | null>(null);
   const [dragEnd, setDragEnd] = useState<Date | null>(null);
+  const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleEventDragStart = useCallback((e: React.MouseEvent, event: CalendarEvent, date: Date) => {
+    e.stopPropagation();
+    if (e.button !== 0) return;
+    
+    setDraggedEvent(event);
+    setDragStart(date);
+    setDragEnd(date);
+    setIsDragging(true);
+  }, []);
 
   const handleCellMouseDown = useCallback((e: React.MouseEvent, date: Date) => {
     // Only start drag if left mouse button and not clicking on an event
@@ -65,10 +80,27 @@ export const MonthView: React.FC<MonthViewProps> = ({
   }, [isDragging, dragStart]);
 
   const handleMouseUp = useCallback(() => {
+    if (isDragging && draggedEvent && dragStart && dragEnd && onEventMove) {
+      // Event was being dragged to a new date
+      const newStartDate = new Date(dragEnd);
+      newStartDate.setHours(draggedEvent.startDate.getHours(), draggedEvent.startDate.getMinutes(), 0, 0);
+      
+      const duration = draggedEvent.endDate.getTime() - draggedEvent.startDate.getTime();
+      const newEndDate = new Date(newStartDate.getTime() + duration);
+      
+      onEventMove(draggedEvent.id, newStartDate, newEndDate);
+      setIsDragging(false);
+      setDraggedEvent(null);
+      setDragStart(null);
+      setDragEnd(null);
+      return;
+    }
+    
     if (!isDragging || !dragStart || !dragEnd) {
       setIsDragging(false);
       setDragStart(null);
       setDragEnd(null);
+      setDraggedEvent(null);
       return;
     }
     
@@ -92,7 +124,8 @@ export const MonthView: React.FC<MonthViewProps> = ({
     setIsDragging(false);
     setDragStart(null);
     setDragEnd(null);
-  }, [isDragging, dragStart, dragEnd, onDateRangeSelect, onDateClick]);
+    setDraggedEvent(null);
+  }, [isDragging, dragStart, dragEnd, draggedEvent, onDateRangeSelect, onDateClick, onEventMove]);
 
   useEffect(() => {
     if (isDragging) {
@@ -160,6 +193,9 @@ export const MonthView: React.FC<MonthViewProps> = ({
                 isCurrentMonth={isCurrentMonthCell}
                 onClick={onDateClick}
                 onEventClick={onEventClick}
+                onEventDragStart={handleEventDragStart}
+                draggedEventId={draggedEvent?.id}
+                onEventUpdate={onEventUpdate}
               />
             </div>
           );

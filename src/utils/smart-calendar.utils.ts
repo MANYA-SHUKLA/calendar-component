@@ -220,6 +220,9 @@ export interface EventTemplate {
  * Loads templates from localStorage
  */
 export const loadTemplates = (): EventTemplate[] => {
+  if (typeof window === 'undefined') {
+    return getDefaultTemplates();
+  }
   try {
     const stored = localStorage.getItem('calendar-templates');
     if (stored) {
@@ -235,6 +238,9 @@ export const loadTemplates = (): EventTemplate[] => {
  * Saves templates to localStorage
  */
 export const saveTemplates = (templates: EventTemplate[]): void => {
+  if (typeof window === 'undefined') {
+    return;
+  }
   try {
     localStorage.setItem('calendar-templates', JSON.stringify(templates));
   } catch (error) {

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import { CalendarEvent } from './CalendarView.types';
 import { isToday, isCurrentMonth } from '@/utils/date.utils';
 import clsx from 'clsx';
@@ -12,6 +12,9 @@ export interface CalendarCellProps {
   isCurrentMonth: boolean;
   onClick: (date: Date) => void;
   onEventClick: (event: CalendarEvent) => void;
+  onEventDragStart?: (e: React.MouseEvent, event: CalendarEvent, date: Date) => void;
+  draggedEventId?: string;
+  onEventUpdate?: (eventId: string, updates: Partial<CalendarEvent>) => void;
 }
 
 export const CalendarCell: React.FC<CalendarCellProps> = React.memo(({
@@ -23,11 +26,17 @@ export const CalendarCell: React.FC<CalendarCellProps> = React.memo(({
   isCurrentMonth: isCurrentMonthProp,
   onClick,
   onEventClick,
+  onEventDragStart,
+  draggedEventId,
+  onEventUpdate,
 }) => {
   const dayNumber = date.getDate();
   const isTodayCell = useMemo(() => isTodayProp || isToday(date), [date, isTodayProp]);
   // Note: isCurrentMonthProp should be passed correctly from parent
   const isCurrentMonthCell = isCurrentMonthProp;
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const editInputRef = useRef<HTMLInputElement>(null);
   
   const handleClick = useCallback(() => {
     onClick(date);
@@ -35,8 +44,46 @@ export const CalendarCell: React.FC<CalendarCellProps> = React.memo(({
 
   const handleEventClick = useCallback((e: React.MouseEvent, event: CalendarEvent) => {
     e.stopPropagation();
-    onEventClick(event);
-  }, [onEventClick]);
+    // Double click to edit inline
+    if (e.detail === 2 && onEventUpdate) {
+      setEditingEvent(event);
+      setEditTitle(event.title);
+      setTimeout(() => editInputRef.current?.focus(), 0);
+    } else {
+      onEventClick(event);
+    }
+  }, [onEventClick, onEventUpdate]);
+
+  const handleEventDragStart = useCallback((e: React.MouseEvent, event: CalendarEvent) => {
+    if (onEventDragStart) {
+      onEventDragStart(e, event, date);
+    }
+  }, [onEventDragStart, date]);
+
+  const handleTitleBlur = useCallback(() => {
+    if (editingEvent && editTitle.trim() && onEventUpdate) {
+      onEventUpdate(editingEvent.id, { title: editTitle.trim() });
+    }
+    setEditingEvent(null);
+    setEditTitle('');
+  }, [editingEvent, editTitle, onEventUpdate]);
+
+  const handleTitleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleTitleBlur();
+    } else if (e.key === 'Escape') {
+      setEditingEvent(null);
+      setEditTitle('');
+    }
+  }, [handleTitleBlur]);
+
+  useEffect(() => {
+    if (editingEvent && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [editingEvent]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -87,20 +134,43 @@ export const CalendarCell: React.FC<CalendarCellProps> = React.memo(({
         )}
       </div>
       <div className="space-y-1 overflow-hidden">
-        {visibleEvents.map((event) => (
-          <div
-            key={event.id}
-            onClick={(e) => handleEventClick(e, event)}
-            className="text-xs px-2 py-1 rounded-md truncate cursor-pointer hover:opacity-90 hover:scale-105 transition-all duration-200 shadow-md border border-white/10"
-            style={{
-              backgroundColor: event.color || '#3b82f6',
-              color: '#ffffff',
-            }}
-            title={`${event.title} - ${event.startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`}
-          >
-            {event.title}
-          </div>
-        ))}
+        {visibleEvents.map((event) => {
+          const isDragged = draggedEventId === event.id;
+          const isEditing = editingEvent?.id === event.id;
+          
+          return (
+            <div
+              key={event.id}
+              data-event
+              onMouseDown={(e) => handleEventDragStart(e, event)}
+              onClick={(e) => handleEventClick(e, event)}
+              className={clsx(
+                "text-xs px-2 py-1 rounded-md truncate cursor-move hover:opacity-90 hover:scale-105 transition-all duration-200 shadow-md border border-white/10",
+                isDragged && "opacity-50"
+              )}
+              style={{
+                backgroundColor: event.color || '#3b82f6',
+                color: '#ffffff',
+              }}
+              title={`${event.title} - ${event.startDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} (Double-click to edit)`}
+            >
+              {isEditing ? (
+                <input
+                  ref={editInputRef}
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  onBlur={handleTitleBlur}
+                  onKeyDown={handleTitleKeyDown}
+                  className="w-full bg-transparent text-white text-xs font-semibold outline-none border-b border-white/50 focus:border-white"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                event.title
+              )}
+            </div>
+          );
+        })}
         {remainingCount > 0 && (
           <button
             onClick={(e) => {

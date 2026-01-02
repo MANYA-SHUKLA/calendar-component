@@ -3,6 +3,7 @@ import { CalendarViewProps, CalendarEvent } from './CalendarView.types';
 import { MonthView } from './MonthView';
 import { WeekView } from './WeekView';
 import { EventModal } from './EventModal';
+import { QuickAdd } from './QuickAdd';
 import { useCalendar } from '@/hooks/useCalendar';
 import { useEventManager } from '@/hooks/useEventManager';
 import { formatDate } from '@/utils/date.utils';
@@ -81,6 +82,32 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     }
   }, [editingEvent, eventManager]);
 
+  const handleEventMove = useCallback((eventId: string, newStartDate: Date, newEndDate: Date) => {
+    const event = eventManager.events.find((e) => e.id === eventId);
+    if (!event) return false;
+
+    const duration = event.endDate.getTime() - event.startDate.getTime();
+    const newEnd = newEndDate || new Date(newStartDate.getTime() + duration);
+    
+    return eventManager.updateEvent(eventId, {
+      startDate: newStartDate,
+      endDate: newEnd,
+    });
+  }, [eventManager]);
+
+  const handleEventResize = useCallback((eventId: string, newEndDate: Date) => {
+    const event = eventManager.events.find((e) => e.id === eventId);
+    if (!event) return false;
+
+    if (newEndDate <= event.startDate) {
+      return false; // End date must be after start date
+    }
+
+    return eventManager.updateEvent(eventId, {
+      endDate: newEndDate,
+    });
+  }, [eventManager]);
+
   const handleDeleteEvent = useCallback((id: string) => {
     eventManager.deleteEvent(id);
   }, [eventManager]);
@@ -153,8 +180,17 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     return expandRecurringEvents(eventManager.events, viewStart, viewEnd);
   }, [eventManager.events, calendar.currentDate, calendar.view]);
 
+  const handleQuickAdd = useCallback((eventData: Partial<CalendarEvent>) => {
+    eventManager.addEvent(eventData);
+  }, [eventManager]);
+
   return (
     <div className="w-full h-full flex flex-col">
+      {/* Quick Add */}
+      <div className="mb-4">
+        <QuickAdd onAdd={handleQuickAdd} />
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div className="flex items-center gap-3">
@@ -235,6 +271,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             onDateClick={handleDateClick}
             onDateRangeSelect={calendar.setSelectedDateRange}
             onEventClick={handleEventClick}
+            onEventMove={handleEventMove}
+            onEventUpdate={(eventId, updates) => {
+              eventManager.updateEvent(eventId, updates);
+            }}
           />
         ) : (
           <WeekView
@@ -245,6 +285,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             onEventClick={handleEventClick}
             onTimeSlotClick={handleTimeSlotClick}
             onDragCreate={handleDragCreate}
+            onEventMove={handleEventMove}
+            onEventResize={handleEventResize}
           />
         )}
       </div>
