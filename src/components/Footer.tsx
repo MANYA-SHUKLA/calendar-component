@@ -1,11 +1,9 @@
 'use client';
-
 export default function Footer() {
   return (
     <footer className="fixed bottom-0 left-0 right-0 z-30 bg-gradient-to-r from-primary-500/90 via-accent-500/90 to-primary-600/90 backdrop-blur-xl border-t-2 border-primary-400/30 shadow-2xl">
       <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-          {/* Made with love text */}
           <div className="flex items-center gap-1.5 sm:gap-2 text-neutral-100/90 flex-wrap justify-center sm:justify-start">
             <span className="text-xs sm:text-sm font-medium">Made with</span>
             <span className="text-red-400 animate-pulse text-base sm:text-lg">❤️</span>
